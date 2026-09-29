@@ -84,7 +84,10 @@
       "value": "Standard_NC24ads_A100_v4"
     },
     "enableVmssPasswordAuth": {
-      "value": true
+      "value": false
+    },
+    "vmssAdminPassword": {
+      "value": "${VMSS_ADMIN_PASSWORD}"
     },
     "upgradePolicyMode": {
       "value": "Automatic"

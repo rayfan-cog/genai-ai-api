@@ -173,7 +173,8 @@ The main parameters in `infra/main.parameters.json` are as follows. You do not n
 | vllmMaxModelLen | integer | No | Specifies the maximum model length of vLLM's context window. | 4096 | 4096 |
 | vllmMaxNumBatchedTokens | integer | No | Specifies the maximum number of tokens to be batched in vLLM. | 4096 | 4096 |
 | enablePlamoCustomApiTransform | bool | No | Specifies whether to enable request/response transformation for vLLM API. `true` uses custom format for Plamo translation, `false` passes through OpenAI-compatible API as is. | false | false |
-| enableVmssPasswordAuth | bool | No | Specifies whether to enable password authentication for VMSS VMs. If `true`, password authentication is enabled in addition to SSH key authentication. The password is automatically generated during deployment (e.g., if the VMSS resource name is `vmss-i3y4nehvo32ts`, the password is generated from the suffix `i3y4nehvo32ts` with the rule "first character capitalized + next 10 characters lowercase + `!` at the end" resulting in `I3y4nehvo32!`). It is recommended to change the password after the first login. | false | false |
+| enableVmssPasswordAuth | bool | No | Specifies whether to enable password authentication for VMSS VMs. If `true`, password authentication is enabled in addition to SSH key authentication. The password is supplied via `vmssAdminPassword`. | false | false |
+| vmssAdminPassword | securestring | No | Admin password for VMSS VMs, used when `enableVmssPasswordAuth` is `true`. `main.parameters.json` reads it from the `VMSS_ADMIN_PASSWORD` environment variable. Set a long random value with `azd env set` (see "Accessing VMSS VMs and Troubleshooting"). | '' | - |
 | vmssInstanceCount | integer | Yes | Specifies the number of VMs to create in VMSS. | None | 1 |
 | vmssSku | string | Yes | Specifies the VM size to create in VMSS. | Standard_NC24ads_A100_v4 | Standard_NC24ads_A100_v4 |
 | vmZones | array | Yes | Specifies the zones where the VMSS VM size is available, as a string array. | None | ["1", "2", "3"] |
@@ -758,13 +759,19 @@ This section explains how to perform operations and maintenance within VMSS VMs 
 
 ### 1. Enable Password Authentication
 
-Set `enableVmssPasswordAuth` to `true` in `infra/main.parameters.json` and deploy.
+Generate a random password, store it in the azd environment, set `enableVmssPasswordAuth` to `true` in `infra/main.parameters.json`, and deploy.
+
+```bash
+azd env set VMSS_ADMIN_PASSWORD "$(openssl rand -base64 32)"
+```
 
 ```json
 "enableVmssPasswordAuth": {
   "value": true
 }
 ```
+
+After you finish, it is recommended to set `enableVmssPasswordAuth` back to `false` and redeploy.
 
 ### 2. Enable Boot Diagnostics
 
@@ -779,7 +786,7 @@ Enable boot diagnostics for VMSS in the Azure Portal.
 1. Select the target VM instance from **Instances** in the VMSS resource
 2. From the left menu, select **Support + troubleshooting** > **Serial console**
 3. When the console is displayed, press Enter to display the login prompt
-4. Enter the username (default: `azureuser`) and password (`VMSS_ADMIN_CREDENTIAL` value) to log in
+4. Enter the username (default: `azureuser`) and password (retrieve it with `azd env get-value VMSS_ADMIN_PASSWORD`) to log in
 
 ## Troubleshooting
 

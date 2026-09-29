@@ -175,7 +175,8 @@ virtualMachines  japaneast    Standard_NC24ads_A100_v4  3        None
 | vllmMaxModelLen | integer | No | vLLMのコンテキストウィンドウの最大モデル長を指定します。 | 4096 | 4096 |
 | vllmMaxNumBatchedTokens | integer | No | vLLMのバッチ処理される最大トークン数を指定します。 | 4096 | 4096 |
 | enablePlamoCustomApiTransform | bool | No | vLLM APIのリクエスト/レスポンス変換を有効にするか指定します。``true``の場合はPlamo翻訳用のカスタムフォーマット、``false``の場合はOpenAI互換APIをそのままパススルーします。 | false | false |
-| enableVmssPasswordAuth | bool | No | VMSS VMへのパスワード認証を有効にするか指定します。``true``の場合、SSH鍵認証に加えてパスワード認証も有効になります。パスワードはデプロイ時に自動生成されます（例: VMSSリソース名が`vmss-i3y4nehvo32ts`の場合、リソース名のサフィックス部分`i3y4nehvo32ts`から「先頭1文字を大文字 + 続く10文字を小文字 + 末尾に`!`」の規則で`I3y4nehvo32!`が生成されます）。パスワードは初回ログイン後、変更することを推奨します。 | false | false |
+| enableVmssPasswordAuth | bool | No | VMSS VMへのパスワード認証を有効にするか指定します。``true``の場合、SSH鍵認証に加えてパスワード認証も有効になります。パスワードは``vmssAdminPassword``で指定します。 | false | false |
+| vmssAdminPassword | securestring | No | ``enableVmssPasswordAuth``が``true``の場合に使用するVMSS VMの管理者パスワードです。``main.parameters.json``では環境変数``VMSS_ADMIN_PASSWORD``から読み込みます。十分な長さのランダムな値を``azd env set``で設定してください（手順は「VMSS VMへのアクセスとトラブルシューティング」を参照）。 | '' | - |
 | vmssInstanceCount | integer | Yes | VMSSで作成するVMの数を指定します。 | なし | 1 |
 | vmssSku | string | Yes | VMSSで作成するVMのVMサイズを指定します。 | Standard_NC24ads_A100_v4 | Standard_NC24ads_A100_v4 |
 | vmZones | array | Yes | VMSSで作成するVMのVMサイズが利用できるゾーンを、文字列配列として指定します。 | なし | ["1", "2", "3"] |
@@ -765,13 +766,19 @@ VMSSのVM内で操作やメンテナンスを行う場合や、デプロイ後�
 
 ### 1. パスワード認証の有効化
 
-``infra/main.parameters.json``の`enableVmssPasswordAuth`を`true`に設定してデプロイします。
+ランダムなパスワードを生成してazd環境に設定し、``infra/main.parameters.json``の`enableVmssPasswordAuth`を`true`に設定してデプロイします。
+
+```bash
+azd env set VMSS_ADMIN_PASSWORD "$(openssl rand -base64 32)"
+```
 
 ```json
 "enableVmssPasswordAuth": {
   "value": true
 }
 ```
+
+作業完了後は`enableVmssPasswordAuth`を`false`に戻して再デプロイすることを推奨します。
 
 ### 2. ブート診断の有効化
 
@@ -786,7 +793,7 @@ Azure PortalでVMSSのブート診断を有効化します。
 1. VMSSリソースの **インスタンス** から対象のVMインスタンスを選択します
 2. 左メニューから **サポート + トラブルシューティング** > **シリアル コンソール** を選択します
 3. コンソールが表示されたら、Enterキーを押してログインプロンプトを表示します
-4. ユーザー名（デフォルト: `azureuser`）とパスワード（`VMSS_ADMIN_CREDENTIAL`の値）を入力してログインします
+4. ユーザー名（デフォルト: `azureuser`）とパスワード（`azd env get-value VMSS_ADMIN_PASSWORD`で確認できます）を入力してログインします
 
 ## トラブルシューティング
 
