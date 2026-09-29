@@ -24,6 +24,9 @@ param vllmContainerImage string = 'vllm/vllm-openai:latest'
 param enablePlamoCustomApiTransform bool = false
 @description('Enable password authentication for VMSS VMs (in addition to SSH key)')
 param enableVmssPasswordAuth bool = false
+@secure()
+@description('Admin password for VMSS VMs (required when enableVmssPasswordAuth is true)')
+param vmssAdminPassword string = ''
 @description('Deploy Code Interpreter resources (Functions, OpenAI)')
 param deployCodeInterpreter bool = false
 @description('Deploy OpenAI Direct resources (OpenAI)')
@@ -220,9 +223,6 @@ var tags = { 'azd-env-name': environmentName }
 
 var apimSecret = uniqueString(tenant().tenantId, subscription().id, rg.id, environmentName, 'seed-for-apim-secret')
 
-// VMSS admin password (generated from resourceToken)
-var vmssGeneratedPassword = '${toUpper(take(resourceToken, 1))}${toLower(substring(resourceToken, 1, 10))}!'
-
 // Azure OpenAI public FQDN (used as TLS hostname via private DNS override)
 var openaiPublicFqdn = format('{0}.openai.azure.com', !empty(openaiAccountName) ? openaiAccountName : '${abbrs.cognitiveServicesAccounts}${resourceToken}')
 
@@ -388,7 +388,7 @@ module vmss './core/vmss/vmss.bicep' = if (deployVllmSupportModel) {
     vllmMaxNumBatchedTokens: vllmMaxNumBatchedTokens
     vllmContainerImage: vllmContainerImage
     enablePasswordAuth: enableVmssPasswordAuth
-    adminPassword: enableVmssPasswordAuth ? vmssGeneratedPassword : ''
+    adminPassword: enableVmssPasswordAuth ? vmssAdminPassword : ''
     tags: tags
   }
 }
@@ -701,8 +701,6 @@ output NETWORK_APPGW_NAME string = network.outputs.appGatewayNameOut
 // VMSS outputs (conditional)
 output VMSS_ID string = deployVllmSupportModel ? vmss.outputs.vmssId : ''
 output VMSS_NAME string = deployVllmSupportModel ? vmss.outputs.vmssNameOut : ''
-#disable-next-line outputs-should-not-contain-secrets
-output VMSS_ADMIN_CREDENTIAL string = enableVmssPasswordAuth ? vmssGeneratedPassword : ''
 
 // Automation outputs (conditional)
 output AUTOMATION_ACCOUNT_ID string = deployVllmSupportModel ? automation.outputs.automationAccountId : ''
