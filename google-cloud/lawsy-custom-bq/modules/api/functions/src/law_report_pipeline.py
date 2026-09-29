@@ -564,7 +564,7 @@ def _build_url_web_hits(urls: list[str]) -> list[dict]:
         try:
             after_scheme = url.split("://", 1)[-1]
             fallback_domain = after_scheme.split("/")[0]
-            final_url, title = gemini_helpers._fetch_page_info(url, fallback_domain, trusted=False)
+            final_url, title = gemini_helpers._fetch_page_info(url, fallback_domain)
             return {"title": title, "url": final_url, "snippet": ""}
         except Exception as e:
             logger.warning(f"URL hit fetch failed for {url}: {e}")
